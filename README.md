@@ -1,6 +1,6 @@
 # TheReelPeet-Seq-MM <!-- v0.1 -->
 
-![TheReelPeet panel](doc/image/TheReelPeet.svg)
+![TheReelPeet panel](res/TheReelPeet.svg)
 
 **TheReelPeet-Seq-MM** is a dual, clock-driven generative sequencer for the 4ms MetaModule, designed for evolving, overlapping melodic motion rather than strict step programming.
 
