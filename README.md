@@ -1,4 +1,4 @@
-# TheReelPeet-Seq-MM
+# TheReelPeet-Seq-MM <!-- v0.1 -->
 
 ![TheReelPeet panel](doc/image/TheReelPeet.svg)
 
