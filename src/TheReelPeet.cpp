@@ -382,22 +382,22 @@ struct LengthDisplay : TransparentWidget {
     if (!value)
       return;
 
-    nvgFontFaceId(args.vg, APP->window->uiFont->handle);
+    auto font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
+    if (!font || font->handle < 0)
+      return;
+
+    nvgFontFaceId(args.vg, font->handle);
     nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
     nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
     char buf[4];
     snprintf(buf, sizeof(buf), "%d", *value);
 
-    // number
-    nvgFontSize(args.vg, 10.f); // was 9
+    nvgFontSize(args.vg, 10.f);
     nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.35f, buf, nullptr);
 
-    // label (moved up)
-    nvgFontSize(args.vg, 9.f); // was 8
-    nvgText(args.vg, box.size.x * 0.5f,
-            box.size.y * 0.65f, // was 0.75
-            "Steps", nullptr);
+    nvgFontSize(args.vg, 9.f);
+    nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.65f, "Steps", nullptr);
   }
 };
 
@@ -408,20 +408,22 @@ struct BPMDisplay : TransparentWidget {
     if (!param)
       return;
 
+    auto font = APP->window->loadFont(asset::system("res/fonts/ShareTechMono-Regular.ttf"));
+    if (!font || font->handle < 0)
+      return;
+
     int bpm = (int)std::round(param->getValue());
 
-    nvgFontFaceId(args.vg, APP->window->uiFont->handle);
+    nvgFontFaceId(args.vg, font->handle);
     nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
     nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", bpm);
 
-    // number
     nvgFontSize(args.vg, 9.f);
     nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.35f, buf, nullptr);
 
-    // label
     nvgFontSize(args.vg, 8.f);
     nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.65f, "BPM", nullptr);
   }

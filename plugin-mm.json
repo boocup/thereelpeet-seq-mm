@@ -1,0 +1,15 @@
+{
+  "brand": "Pete Buchhop",
+  "name": "TheReelPeet-MM",
+  "slug": "thereelpeet-seq-mm",
+  "version": "2.0.0",
+  "license": "MIT",
+
+  "modules": [
+    {
+      "name": "TheReelPeet-MM",
+      "slug": "thereelpeet-seq-mm",
+      "description": "Dual generative sequencer with per-lane BPM, step length, randomized pitch and trigger outputs"
+    }
+  ]
+}
