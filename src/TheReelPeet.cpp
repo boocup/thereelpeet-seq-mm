@@ -50,7 +50,8 @@ struct TheReelPeet : Module {
   float timerA = 0.f;
   float trigTimerA = 0.f;
   float seqA[16];
-  bool gateHeldA = false;
+  float holdTimerA = 0.f;
+  float heldCVA = 0.f;
   bool stepMutedA = false;
 
   // Lane B state
@@ -59,7 +60,8 @@ struct TheReelPeet : Module {
   float timerB = 0.f;
   float trigTimerB = 0.f;
   float seqB[16];
-  bool gateHeldB = false;
+  float holdTimerB = 0.f;
+  float heldCVB = 0.f;
   bool stepMutedB = false;
 
   int lenA = 2;
@@ -113,7 +115,7 @@ struct TheReelPeet : Module {
 
   void processLane(bool &running, int &step, float &timer, float &trigTimer,
                    float bpm, float *seq, int length, float &outCV,
-                   float &outTrig, bool &gateHeld, bool &stepMuted,
+                   float &outTrig, float &holdTimer, float &heldCV, bool &stepMuted,
                    dsp::SchmittTrigger &onTrig, dsp::SchmittTrigger &randTrig,
                    dsp::SchmittTrigger &randInTrig, float onVal, float randVal,
                    float randInV, bool runGateConnected, float runGateV,
@@ -143,34 +145,42 @@ struct TheReelPeet : Module {
         trigTimer = 0.f;
     }
 
+    if (holdTimer > 0.f) {
+      holdTimer -= args.sampleTime;
+      if (holdTimer < 0.f)
+        holdTimer = 0.f;
+    }
+
     if (running) {
       timer += args.sampleTime;
       if (timer >= stepTime) {
         timer -= stepTime;
         step = (step + 1) % length;
 
-        // Reset per-step state
-        gateHeld = false;
         stepMuted = false;
         trigTimer = 0.f;
 
-        const float dynVal = clamp(dynamics, -1.f, 1.f);
-        if (dynVal < 0.f && random::uniform() < -dynVal) {
-          gateHeld = true;
-        } else if (dynVal > 0.f && random::uniform() < dynVal) {
-          stepMuted = true;
-        } else {
-          trigTimer = 0.01f;
+        if (holdTimer <= 0.f) {
+          const float dynVal = clamp(dynamics, -1.f, 1.f);
+          if (dynVal < 0.f && random::uniform() < -dynVal) {
+            float jitter = 1.f + (random::uniform() * 0.2f - 0.1f);
+            holdTimer = 1.5f * stepTime * jitter;
+            heldCV = seq[step];
+          } else if (dynVal > 0.f && random::uniform() < dynVal) {
+            stepMuted = true;
+          } else {
+            trigTimer = 0.01f;
+          }
         }
       }
 
-      outCV = stepMuted ? 0.f : seq[step];
-      outTrig = (trigTimer > 0.f || gateHeld) ? 10.f : 0.f;
+      outCV = holdTimer > 0.f ? heldCV : (stepMuted ? 0.f : seq[step]);
+      outTrig = (trigTimer > 0.f || holdTimer > 0.f) ? 10.f : 0.f;
     } else {
       timer = 0.f;
       step = 0;
       trigTimer = 0.f;
-      gateHeld = false;
+      holdTimer = 0.f;
       stepMuted = false;
     }
   }
@@ -196,7 +206,7 @@ struct TheReelPeet : Module {
 
     processLane(runningA, stepA, timerA, trigTimerA,
                 params[BPM_A_PARAM].getValue(), seqA, lenA,
-                outA, trigAout, gateHeldA, stepMutedA,
+                outA, trigAout, holdTimerA, heldCVA, stepMutedA,
                 onA, randA, randInA,
                 params[BUTTON_A_PARAM].getValue(),
                 params[RAND_A_PARAM].getValue(), rndInA,
@@ -205,7 +215,7 @@ struct TheReelPeet : Module {
 
     processLane(runningB, stepB, timerB, trigTimerB,
                 params[BPM_B_PARAM].getValue(), seqB, lenB,
-                outB, trigBout, gateHeldB, stepMutedB,
+                outB, trigBout, holdTimerB, heldCVB, stepMutedB,
                 onB, randB, randInB,
                 params[BUTTON_B_PARAM].getValue(),
                 params[RAND_B_PARAM].getValue(), rndInB,

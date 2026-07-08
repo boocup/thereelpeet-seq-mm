@@ -10,6 +10,7 @@
 *.xcf
 
 /build
+/build-mm
 /dep
 /dist
 /patches
