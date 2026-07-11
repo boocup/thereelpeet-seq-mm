@@ -2,26 +2,34 @@ cmake_minimum_required(VERSION 3.19)
 
 project(TheReelPeetSeqMM LANGUAGES C CXX ASM)
 
-set(METAMODULE_PLUGIN_STATIC_LIBC ON CACHE BOOL
-    "Use static/prebuilt libc for MetaModule plugins" FORCE)
+if(NOT "${METAMODULE_SDK_DIR}" STREQUAL "")
+    message("METAMODULE_SDK_DIR set by CMake variable ${METAMODULE_SDK_DIR}")
+elseif(DEFINED ENV{METAMODULE_SDK_DIR})
+    set(METAMODULE_SDK_DIR "$ENV{METAMODULE_SDK_DIR}")
+    message("METAMODULE_SDK_DIR set by environment variable ${METAMODULE_SDK_DIR}")
+else()
+    set(METAMODULE_PLUGIN_STATIC_LIBC ON CACHE BOOL
+        "Use static/prebuilt libc for MetaModule plugins" FORCE)
+    set(METAMODULE_SDK_BUILD_PLUGIN_LIBC OFF CACHE BOOL
+        "Build plugin-libc from source" FORCE)
+    set(METAMODULE_SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/../MyModule-metamodule/sdk")
+    message("METAMODULE_SDK_DIR set to default: ${METAMODULE_SDK_DIR}")
+endif()
 
-set(METAMODULE_SDK_BUILD_PLUGIN_LIBC OFF CACHE BOOL
-    "Build plugin-libc from source" FORCE)
+include(${METAMODULE_SDK_DIR}/plugin.cmake)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../MyModule-metamodule/sdk/plugin.cmake)
-
-add_library(thereelpeet-seq STATIC
+add_library(thereelpeetseqmm STATIC
     ${CMAKE_CURRENT_LIST_DIR}/src/plugin.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/TheReelPeet.cpp
 )
 
-target_include_directories(thereelpeet-seq PRIVATE
+target_include_directories(thereelpeetseqmm PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/src
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
 create_plugin(
-    SOURCE_LIB      thereelpeet-seq
+    SOURCE_LIB      thereelpeetseqmm
     SOURCE_ASSETS   ${CMAKE_CURRENT_LIST_DIR}/res
     DESTINATION     ${CMAKE_CURRENT_BINARY_DIR}/out
     PLUGIN_NAME     thereelpeet-seq-mm

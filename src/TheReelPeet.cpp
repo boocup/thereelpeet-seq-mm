@@ -27,11 +27,11 @@ struct TheReelPeet : Module {
     PARAMS_LEN
   };
   enum InputId {
-    RNDTRIG_A_INPUT,
-    RNDTRIG_B_INPUT,
-
     RUN_A_INPUT,
     RUN_B_INPUT,
+
+    RNDTRIG_A_INPUT,
+    RNDTRIG_B_INPUT,
 
     INPUTS_LEN
   };
@@ -85,9 +85,9 @@ struct TheReelPeet : Module {
     configParam(BPM_B_PARAM, 20.f, 300.f, 120.f, "Lane B BPM", " BPM");
 
     configParam(DYNAMICS_A_PARAM, -1.f, 1.f, 0.f,
-                "Lane A Dynamics. CCW: held gates, CW: note drops");
+                "Lane A Dynamics. CW: held gates, CCW: note drops");
     configParam(DYNAMICS_B_PARAM, -1.f, 1.f, 0.f,
-                "Lane B Dynamics. CCW: held gates, CW: note drops");
+                "Lane B Dynamics. CW: held gates, CCW: note drops");
 
     configInput(RNDTRIG_A_INPUT, "Randomize Trigger A (rising edge)");
     configInput(RNDTRIG_B_INPUT, "Randomize Trigger B (rising edge)");
@@ -162,14 +162,14 @@ struct TheReelPeet : Module {
 
         if (holdTimer <= 0.f) {
           const float dynVal = clamp(dynamics, -1.f, 1.f);
-          if (dynVal < 0.f && random::uniform() < -dynVal) {
+          if (dynVal > 0.f && random::uniform() < dynVal) {
             float jitter = 1.f + (random::uniform() * 0.2f - 0.1f);
             holdTimer = 1.5f * stepTime * jitter;
             heldCV = seq[step];
-          } else if (dynVal > 0.f && random::uniform() < dynVal) {
+          } else if (dynVal < 0.f && random::uniform() < -dynVal) {
             stepMuted = true;
           } else {
-            trigTimer = 0.01f;
+            trigTimer = stepTime * 0.5f;
           }
         }
       }
@@ -289,7 +289,11 @@ struct BPMDisplay : TransparentWidget {
 struct TheReelPeetWidget : ModuleWidget {
   TheReelPeetWidget(TheReelPeet *module) {
     setModule(module);
+#ifdef METAMODULE_BUILTIN
+    setPanel(createPanel("thereelpeet-seq-mm/TheReelPeet.png"));
+#else
     setPanel(createPanel(asset::plugin(pluginInstance, "res/TheReelPeet.svg")));
+#endif
 
     addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
     addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -303,9 +307,9 @@ struct TheReelPeetWidget : ModuleWidget {
     const float randY    = 32.f;
     const float knobY    = 46.f;
     const float bpmKnobY = 70.f;
-    const float dynKnobY = 93.f;
-    const float outY     = 108.f;
-    const float rndTrigY = 120.f;
+    const float dynKnobY = 89.f;
+    const float outY     = 104.f;
+    const float rndTrigY = 116.f;
     const float cvDX     = 4.5f;
 
     // --- Lane A ---
