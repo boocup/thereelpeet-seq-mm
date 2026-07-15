@@ -81,8 +81,8 @@ struct TheReelPeet : Module {
     configParam(RAND_B_PARAM, 0.f, 1.f, 0.f, "Lane B Randomize");
     configParam(LENGTH_B_PARAM, 2.f, 16.f, 3.f, "Lane B Length (2-16 steps)");
 
-    configParam(BPM_A_PARAM, 20.f, 300.f, 120.f, "Lane A BPM", " BPM");
-    configParam(BPM_B_PARAM, 20.f, 300.f, 120.f, "Lane B BPM", " BPM");
+    configParam(BPM_A_PARAM, 1.f, 240.f, 120.f, "Lane A BPM", " BPM");
+    configParam(BPM_B_PARAM, 1.f, 240.f, 120.f, "Lane B BPM", " BPM");
 
     configParam(DYNAMICS_A_PARAM, -1.f, 1.f, 0.f,
                 "Lane A Dynamics. CW: held gates, CCW: note drops");
@@ -133,7 +133,7 @@ struct TheReelPeet : Module {
       randomize(seq);
 
     // TIMING
-    bpm = clamp(bpm, 20.f, 300.f);
+    bpm = clamp(bpm, 1.f, 240.f);
     const float stepTime = 60.f / bpm;
 
     outCV = 0.f;
@@ -169,7 +169,7 @@ struct TheReelPeet : Module {
           } else if (dynVal < 0.f && random::uniform() < -dynVal) {
             stepMuted = true;
           } else {
-            trigTimer = stepTime * 0.5f;
+            trigTimer = 0.01f;
           }
         }
       }
