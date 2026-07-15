@@ -24,25 +24,23 @@ struct TheReelPeet : Module {
     DYNAMICS_A_PARAM,
     DYNAMICS_B_PARAM,
 
+    RISE_A_PARAM,
+    FALL_A_PARAM,
+    RISE_B_PARAM,
+    FALL_B_PARAM,
+
     PARAMS_LEN
   };
-  enum InputId {
-    RUN_A_INPUT,
-    RUN_B_INPUT,
-
-    RNDTRIG_A_INPUT,
-    RNDTRIG_B_INPUT,
-
-    INPUTS_LEN
-  };
+  enum InputId { INPUTS_LEN };
   enum OutputId {
     OUT_A_OUTPUT,
-    TRIG_A_OUTPUT,
+    ENV_A_OUTPUT,
     OUT_B_OUTPUT,
-    TRIG_B_OUTPUT,
+    ENV_B_OUTPUT,
     OUTPUTS_LEN
   };
   enum LightId { RUN_A_LIGHT, RUN_B_LIGHT, LIGHTS_LEN };
+  enum EnvPhase { ENV_IDLE, ENV_ATTACK, ENV_SUSTAIN, ENV_DECAY };
 
   // Lane A state
   bool runningA = false;
@@ -53,6 +51,8 @@ struct TheReelPeet : Module {
   float holdTimerA = 0.f;
   float heldCVA = 0.f;
   bool stepMutedA = false;
+  float envLevelA = 0.f;
+  int envPhaseA = ENV_IDLE;
 
   // Lane B state
   bool runningB = false;
@@ -63,12 +63,14 @@ struct TheReelPeet : Module {
   float holdTimerB = 0.f;
   float heldCVB = 0.f;
   bool stepMutedB = false;
+  float envLevelB = 0.f;
+  int envPhaseB = ENV_IDLE;
 
   int lenA = 2;
   int lenB = 2;
 
-  dsp::SchmittTrigger onA, randA, randInA;
-  dsp::SchmittTrigger onB, randB, randInB;
+  dsp::SchmittTrigger onA, randA;
+  dsp::SchmittTrigger onB, randB;
 
   TheReelPeet() {
     config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
@@ -89,15 +91,15 @@ struct TheReelPeet : Module {
     configParam(DYNAMICS_B_PARAM, -1.f, 1.f, 0.f,
                 "Lane B Dynamics. CW: held gates, CCW: note drops");
 
-    configInput(RNDTRIG_A_INPUT, "Randomize Trigger A (rising edge)");
-    configInput(RNDTRIG_B_INPUT, "Randomize Trigger B (rising edge)");
-    configInput(RUN_A_INPUT, "Run CV A (gate: high=run, low=stop)");
-    configInput(RUN_B_INPUT, "Run CV B (gate: high=run, low=stop)");
+    configParam(RISE_A_PARAM, 0.f, 2.f, 0.f, "Lane A Rise time", " s");
+    configParam(FALL_A_PARAM, 0.f, 4.f, 0.5f, "Lane A Fall time", " s");
+    configParam(RISE_B_PARAM, 0.f, 2.f, 0.f, "Lane B Rise time", " s");
+    configParam(FALL_B_PARAM, 0.f, 4.f, 0.5f, "Lane B Fall time", " s");
 
     configOutput(OUT_A_OUTPUT, "Pitch CV A (1V/Oct)");
-    configOutput(TRIG_A_OUTPUT, "Gate A");
+    configOutput(ENV_A_OUTPUT, "Envelope CV A (0-10V)");
     configOutput(OUT_B_OUTPUT, "Pitch CV B (1V/Oct)");
-    configOutput(TRIG_B_OUTPUT, "Gate B");
+    configOutput(ENV_B_OUTPUT, "Envelope CV B (0-10V)");
 
     configLight(RUN_A_LIGHT, "Lane A running");
     configLight(RUN_B_LIGHT, "Lane B running");
@@ -115,21 +117,19 @@ struct TheReelPeet : Module {
 
   void processLane(bool &running, int &step, float &timer, float &trigTimer,
                    float bpm, float *seq, int length, float &outCV,
-                   float &outTrig, float &holdTimer, float &heldCV, bool &stepMuted,
+                   float &holdTimer, float &heldCV,
+                   bool &stepMuted, float &envLevel, int &envPhase,
                    dsp::SchmittTrigger &onTrig, dsp::SchmittTrigger &randTrig,
-                   dsp::SchmittTrigger &randInTrig, float onVal, float randVal,
-                   float randInV, bool runGateConnected, float runGateV,
-                   float dynamics, const ProcessArgs &args) {
+                   float onVal, float randVal, float dynamics,
+                   float riseTime, float fallTime, float &outEnv,
+                   const ProcessArgs &args) {
 
     // RUN STATE
-    if (runGateConnected) {
-      running = (runGateV >= 1.f);
-    } else if (onTrig.process(onVal)) {
+    if (onTrig.process(onVal))
       running = !running;
-    }
 
     // RANDOMIZE
-    if (randTrig.process(randVal) || randInTrig.process(randInV))
+    if (randTrig.process(randVal))
       randomize(seq);
 
     // TIMING
@@ -137,18 +137,15 @@ struct TheReelPeet : Module {
     const float stepTime = 60.f / bpm;
 
     outCV = 0.f;
-    outTrig = 0.f;
 
     if (trigTimer > 0.f) {
       trigTimer -= args.sampleTime;
-      if (trigTimer < 0.f)
-        trigTimer = 0.f;
+      if (trigTimer < 0.f) trigTimer = 0.f;
     }
 
     if (holdTimer > 0.f) {
       holdTimer -= args.sampleTime;
-      if (holdTimer < 0.f)
-        holdTimer = 0.f;
+      if (holdTimer < 0.f) holdTimer = 0.f;
     }
 
     if (running) {
@@ -160,72 +157,100 @@ struct TheReelPeet : Module {
         stepMuted = false;
         trigTimer = 0.f;
 
-        if (holdTimer <= 0.f) {
+        if (holdTimer <= 0.f && envPhase == ENV_IDLE) {
           const float dynVal = clamp(dynamics, -1.f, 1.f);
-          if (dynVal > 0.f && random::uniform() < dynVal) {
+          const float dynCurved = dynVal * dynVal * std::abs(dynVal);
+          if (dynVal > 0.f && random::uniform() < dynCurved) {
             float jitter = 1.f + (random::uniform() * 0.2f - 0.1f);
-            holdTimer = 1.5f * stepTime * jitter;
+            holdTimer = riseTime + length * stepTime * jitter;
             heldCV = seq[step];
-          } else if (dynVal < 0.f && random::uniform() < -dynVal) {
+            envPhase = ENV_ATTACK;
+          } else if (dynVal < 0.f && random::uniform() < dynCurved) {
             stepMuted = true;
+            envLevel = 0.f;
+            envPhase = ENV_IDLE;
           } else {
             trigTimer = 0.01f;
+            heldCV = seq[step];
+            envPhase = ENV_ATTACK;
           }
         }
       }
 
-      outCV = holdTimer > 0.f ? heldCV : (stepMuted ? 0.f : seq[step]);
-      outTrig = (trigTimer > 0.f || holdTimer > 0.f) ? 10.f : 0.f;
+      outCV = stepMuted ? 0.f : heldCV;
     } else {
       timer = 0.f;
       step = 0;
       trigTimer = 0.f;
       holdTimer = 0.f;
       stepMuted = false;
+      envLevel = 0.f;
+      envPhase = ENV_IDLE;
     }
+
+    // ENVELOPE (AR with sustain during holds)
+    if (envPhase == ENV_ATTACK) {
+      if (riseTime < 0.001f) {
+        envLevel = 10.f;
+      } else {
+        envLevel += (10.f / riseTime) * args.sampleTime;
+        envLevel = std::min(envLevel, 10.f);
+      }
+      if (envLevel >= 10.f)
+        envPhase = (holdTimer > 0.f) ? ENV_SUSTAIN : ENV_DECAY;
+    } else if (envPhase == ENV_SUSTAIN) {
+      envLevel = 10.f;
+      if (holdTimer <= 0.f)
+        envPhase = ENV_DECAY;
+    } else if (envPhase == ENV_DECAY) {
+      if (fallTime < 0.001f) {
+        envLevel = 0.f;
+        envPhase = ENV_IDLE;
+      } else {
+        envLevel -= (10.f / fallTime) * args.sampleTime;
+        if (envLevel <= 0.f) {
+          envLevel = 0.f;
+          envPhase = ENV_IDLE;
+        }
+      }
+    }
+
+    outEnv = envLevel;
   }
 
   void process(const ProcessArgs &args) override {
-    const float rndInA = inputs[RNDTRIG_A_INPUT].isConnected()
-                             ? inputs[RNDTRIG_A_INPUT].getVoltage()
-                             : 0.f;
-    const float rndInB = inputs[RNDTRIG_B_INPUT].isConnected()
-                             ? inputs[RNDTRIG_B_INPUT].getVoltage()
-                             : 0.f;
-
     lenA = clamp((int)std::round(params[LENGTH_A_PARAM].getValue()), 1, 16);
     lenB = clamp((int)std::round(params[LENGTH_B_PARAM].getValue()), 1, 16);
 
-    float outA = 0.f, trigAout = 0.f;
-    float outB = 0.f, trigBout = 0.f;
-
-    const bool runAConn = inputs[RUN_A_INPUT].isConnected();
-    const bool runBConn = inputs[RUN_B_INPUT].isConnected();
-    const float runAV = runAConn ? inputs[RUN_A_INPUT].getVoltage() : 0.f;
-    const float runBV = runBConn ? inputs[RUN_B_INPUT].getVoltage() : 0.f;
+    float outA = 0.f, envAout = 0.f;
+    float outB = 0.f, envBout = 0.f;
 
     processLane(runningA, stepA, timerA, trigTimerA,
                 params[BPM_A_PARAM].getValue(), seqA, lenA,
-                outA, trigAout, holdTimerA, heldCVA, stepMutedA,
-                onA, randA, randInA,
+                outA, holdTimerA, heldCVA, stepMutedA,
+                envLevelA, envPhaseA, onA, randA,
                 params[BUTTON_A_PARAM].getValue(),
-                params[RAND_A_PARAM].getValue(), rndInA,
-                runAConn, runAV,
-                params[DYNAMICS_A_PARAM].getValue(), args);
+                params[RAND_A_PARAM].getValue(),
+                params[DYNAMICS_A_PARAM].getValue(),
+                params[RISE_A_PARAM].getValue(),
+                params[FALL_A_PARAM].getValue(),
+                envAout, args);
 
     processLane(runningB, stepB, timerB, trigTimerB,
                 params[BPM_B_PARAM].getValue(), seqB, lenB,
-                outB, trigBout, holdTimerB, heldCVB, stepMutedB,
-                onB, randB, randInB,
+                outB, holdTimerB, heldCVB, stepMutedB,
+                envLevelB, envPhaseB, onB, randB,
                 params[BUTTON_B_PARAM].getValue(),
-                params[RAND_B_PARAM].getValue(), rndInB,
-                runBConn, runBV,
-                params[DYNAMICS_B_PARAM].getValue(), args);
+                params[RAND_B_PARAM].getValue(),
+                params[DYNAMICS_B_PARAM].getValue(),
+                params[RISE_B_PARAM].getValue(),
+                params[FALL_B_PARAM].getValue(),
+                envBout, args);
 
     outputs[OUT_A_OUTPUT].setVoltage(outA);
-    outputs[TRIG_A_OUTPUT].setVoltage(trigAout);
+    outputs[ENV_A_OUTPUT].setVoltage(envAout);
     outputs[OUT_B_OUTPUT].setVoltage(outB);
-    outputs[TRIG_B_OUTPUT].setVoltage(trigBout);
+    outputs[ENV_B_OUTPUT].setVoltage(envBout);
 
     lights[RUN_A_LIGHT].setBrightness(runningA ? 1.f : 0.f);
     lights[RUN_B_LIGHT].setBrightness(runningB ? 1.f : 0.f);
@@ -300,17 +325,17 @@ struct TheReelPeetWidget : ModuleWidget {
     addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
     addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-    const float laneAX = 14.f;
-    const float laneBX = 36.5f;
-
-    const float onY      = 20.f;
-    const float randY    = 32.f;
-    const float knobY    = 46.f;
-    const float bpmKnobY = 70.f;
-    const float dynKnobY = 89.f;
-    const float outY     = 104.f;
-    const float rndTrigY = 116.f;
+    const float laneAX   = 14.f;
+    const float laneBX   = 36.5f;
     const float cvDX     = 4.5f;
+
+    const float onY       = 20.f;
+    const float randY     = 32.f;
+    const float knobY     = 46.f;
+    const float bpmKnobY  = 70.f;
+    const float dynKnobY  = 89.f;
+    const float riseKnobY = 101.f;  // Rise (left) / Fall (right) small knobs
+    const float outY      = 114.f;  // Pitch (left) + Envelope (right) outputs
 
     // --- Lane A ---
     addParam(createParamCentered<LEDButton>(mm2px(Vec(laneAX, onY)), module, TheReelPeet::BUTTON_A_PARAM));
@@ -322,11 +347,11 @@ struct TheReelPeetWidget : ModuleWidget {
     addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(laneAX, bpmKnobY)), module, TheReelPeet::BPM_A_PARAM));
     addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(laneAX, dynKnobY)), module, TheReelPeet::DYNAMICS_A_PARAM));
 
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneAX - cvDX, outY)), module, TheReelPeet::OUT_A_OUTPUT));
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneAX + cvDX, outY)), module, TheReelPeet::TRIG_A_OUTPUT));
+    addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(laneAX - cvDX, riseKnobY)), module, TheReelPeet::RISE_A_PARAM));
+    addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(laneAX + cvDX, riseKnobY)), module, TheReelPeet::FALL_A_PARAM));
 
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(laneAX - cvDX, rndTrigY)), module, TheReelPeet::RNDTRIG_A_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(laneAX + cvDX, rndTrigY)), module, TheReelPeet::RUN_A_INPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneAX - cvDX, outY)), module, TheReelPeet::OUT_A_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneAX + cvDX, outY)), module, TheReelPeet::ENV_A_OUTPUT));
 
     // --- Lane B ---
     addParam(createParamCentered<LEDButton>(mm2px(Vec(laneBX, onY)), module, TheReelPeet::BUTTON_B_PARAM));
@@ -338,19 +363,17 @@ struct TheReelPeetWidget : ModuleWidget {
     addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(laneBX, bpmKnobY)), module, TheReelPeet::BPM_B_PARAM));
     addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(laneBX, dynKnobY)), module, TheReelPeet::DYNAMICS_B_PARAM));
 
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneBX - cvDX, outY)), module, TheReelPeet::OUT_B_OUTPUT));
-    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneBX + cvDX, outY)), module, TheReelPeet::TRIG_B_OUTPUT));
+    addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(laneBX - cvDX, riseKnobY)), module, TheReelPeet::RISE_B_PARAM));
+    addParam(createParamCentered<RoundSmallBlackKnob>(mm2px(Vec(laneBX + cvDX, riseKnobY)), module, TheReelPeet::FALL_B_PARAM));
 
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(laneBX - cvDX, rndTrigY)), module, TheReelPeet::RNDTRIG_B_INPUT));
-    addInput(createInputCentered<PJ301MPort>(mm2px(Vec(laneBX + cvDX, rndTrigY)), module, TheReelPeet::RUN_B_INPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneBX - cvDX, outY)), module, TheReelPeet::OUT_B_OUTPUT));
+    addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(laneBX + cvDX, outY)), module, TheReelPeet::ENV_B_OUTPUT));
 
     // --- Displays ---
     if (module) {
       const float dispW = 12.f;
-      // gap between LENGTH knob (46mm) and BPM knob (70mm): center at 58mm
       const float stepsDispY = 52.f;
-      // gap between BPM knob (70mm) and DYN knob (93mm): center at 81.5mm
-      const float bpmDispY = 76.f;
+      const float bpmDispY   = 76.f;
 
       auto *lenADisplay = new LengthDisplay;
       lenADisplay->box.pos = mm2px(Vec(laneAX - dispW * 0.5f, stepsDispY));
