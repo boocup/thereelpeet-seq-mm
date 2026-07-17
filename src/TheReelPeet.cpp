@@ -268,7 +268,11 @@ struct LengthDisplay : TransparentWidget {
     if (!value)
       return;
 
+#ifdef METAMODULE_BUILTIN
     nvgFontFace(args.vg, "sans");
+#else
+    nvgFontFaceId(args.vg, APP->window->uiFont->handle);
+#endif
     nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
     nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
@@ -292,7 +296,11 @@ struct BPMDisplay : TransparentWidget {
 
     int bpm = (int)std::round(param->getValue());
 
+#ifdef METAMODULE_BUILTIN
     nvgFontFace(args.vg, "sans");
+#else
+    nvgFontFaceId(args.vg, APP->window->uiFont->handle);
+#endif
     nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
     nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
@@ -306,6 +314,20 @@ struct BPMDisplay : TransparentWidget {
     nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.65f, "BPM", nullptr);
   }
 };
+
+#ifndef METAMODULE_BUILTIN
+struct StaticLabel : TransparentWidget {
+  std::string text;
+
+  void draw(const DrawArgs &args) override {
+    nvgFontFaceId(args.vg, APP->window->uiFont->handle);
+    nvgFillColor(args.vg, nvgRGB(0x00, 0x00, 0x00));
+    nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    nvgFontSize(args.vg, 9.f);
+    nvgText(args.vg, box.size.x * 0.5f, box.size.y * 0.5f, text.c_str(), nullptr);
+  }
+};
+#endif
 
 // =======================
 //   WIDGET LAYOUT
@@ -331,8 +353,8 @@ struct TheReelPeetWidget : ModuleWidget {
 
     const float onY       = 20.f;
     const float randY     = 32.f;
-    const float knobY     = 46.f;
-    const float bpmKnobY  = 70.f;
+    const float knobY     = 48.f;
+    const float bpmKnobY  = 69.f;
     const float dynKnobY  = 90.f;
     const float riseKnobY = 105.f;  // Rise (left) / Fall (right) small knobs
     const float outY      = 117.f;  // Pitch (left) + Envelope (right) outputs
@@ -373,7 +395,7 @@ struct TheReelPeetWidget : ModuleWidget {
     if (module) {
       const float dispW = 12.f;
       const float stepsDispY = 52.f;
-      const float bpmDispY   = 76.f;
+      const float bpmDispY   = 73.f;
 
       auto *lenADisplay = new LengthDisplay;
       lenADisplay->box.pos = mm2px(Vec(laneAX - dispW * 0.5f, stepsDispY));
@@ -398,6 +420,20 @@ struct TheReelPeetWidget : ModuleWidget {
       bpmDispB->box.pos = mm2px(Vec(laneBX - dispW * 0.5f, bpmDispY));
       bpmDispB->box.size = mm2px(Vec(dispW, 11.f));
       addChild(bpmDispB);
+
+#ifndef METAMODULE_BUILTIN
+      auto *dynLabelA = new StaticLabel;
+      dynLabelA->text = "Dyn";
+      dynLabelA->box.pos = mm2px(Vec(laneAX - dispW * 0.5f, dynKnobY + 5.f));
+      dynLabelA->box.size = mm2px(Vec(dispW, 5.f));
+      addChild(dynLabelA);
+
+      auto *dynLabelB = new StaticLabel;
+      dynLabelB->text = "Dyn";
+      dynLabelB->box.pos = mm2px(Vec(laneBX - dispW * 0.5f, dynKnobY + 5.f));
+      dynLabelB->box.size = mm2px(Vec(dispW, 5.f));
+      addChild(dynLabelB);
+#endif
     }
   }
 };
