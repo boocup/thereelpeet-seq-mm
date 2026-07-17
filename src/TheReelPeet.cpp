@@ -333,9 +333,9 @@ struct TheReelPeetWidget : ModuleWidget {
     const float randY     = 32.f;
     const float knobY     = 46.f;
     const float bpmKnobY  = 70.f;
-    const float dynKnobY  = 89.f;
-    const float riseKnobY = 101.f;  // Rise (left) / Fall (right) small knobs
-    const float outY      = 114.f;  // Pitch (left) + Envelope (right) outputs
+    const float dynKnobY  = 90.f;
+    const float riseKnobY = 105.f;  // Rise (left) / Fall (right) small knobs
+    const float outY      = 117.f;  // Pitch (left) + Envelope (right) outputs
 
     // --- Lane A ---
     addParam(createParamCentered<LEDButton>(mm2px(Vec(laneAX, onY)), module, TheReelPeet::BUTTON_A_PARAM));
