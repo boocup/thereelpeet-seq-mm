@@ -1,6 +1,6 @@
 # TheReelPeet-Dyn
 
-![TheReelPeet panel](res/TheReelPeet.svg)
+![TheReelPeet-Dyn in VCV Rack](res/TheReelPeet-screenshot.png)
 
 **TheReelPeet-Dyn** is a dual generative sequencer built around probabilistic note phrasing. Rather than playing every step, each lane uses a **Dynamics** knob to shape the musical character — bending notes into sustained holds or dropping them into silence, in a way that breathes and evolves over time.
 
