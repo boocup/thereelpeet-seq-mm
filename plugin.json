@@ -1,24 +1,24 @@
 {
-  "slug": "thereelpeet-seq-mm",
-  "name": "TheReelPeet-MM",
+  "slug": "thereelpeet-dyn",
+  "name": "TheReelPeet-Dyn",
   "version": "2.0.0",
   "license": "MIT",
-  "brand": "Pete Buchhop",
+  "brand": "THEREELPEET",
   "author": "Pete Buchhop",
   "authorEmail": "buchhop@icloud.com",
   "authorUrl": "https://github.com/boocup",
-  "pluginUrl": "https://github.com/boocup/MyModule",
-  "manualUrl": "https://github.com/boocup/MyModule#readme",
-  "sourceUrl": "https://github.com/boocup/MyModule",
-  "changelogUrl": "https://github.com/boocup/MyModule/releases",
+  "pluginUrl": "https://github.com/boocup/thereelpeet-dyn",
+  "manualUrl": "https://github.com/boocup/thereelpeet-dyn#readme",
+  "sourceUrl": "https://github.com/boocup/thereelpeet-dyn",
+  "changelogUrl": "https://github.com/boocup/thereelpeet-dyn/releases",
   "minRackVersion": "2.4.0",
   "modules": [
     {
-      "slug": "thereelpeet-seq-mm",
-      "name": "TheReelPeet-MM",
-      "description": "Dual generative sequencer with per-lane BPM, step length, randomized pitch and trigger outputs, trigger-based randomization, voltage-controlled run state, and hold freeze.",
+      "slug": "thereelpeet-dyn",
+      "name": "TheReelPeet-Dyn",
+      "description": "Dual generative sequencer with probabilistic note holds and drops, per-lane Rise/Fall envelope, and Dynamics knob for evolving melodic motion.",
       "panel": "res/TheReelPeet.svg",
-      "tags": ["Sequencer", "Random"]
+      "tags": ["Sequencer", "Random", "Envelope generator"]
     }
   ]
 }
