@@ -3,12 +3,13 @@
   "MetaModuleBrandSlug": "thereelpeet-seq-mm",
   "MetaModulePluginMaintainer": "Pete Buchhop",
   "MetaModulePluginMaintainerEmail": "buchhop@icloud.com",
-  "MetaModuleDescription": "Dual generative sequencer with per-lane BPM, step length, randomized pitch and trigger outputs",
+  "MetaModulePluginMaintainerUrl": "https://github.com/boocup/thereelpeet-dyn",
+  "MetaModuleDescription": "Dual generative sequencer with probabilistic note holds and drops, per-lane Rise/Fall envelope, and Dynamics knob for evolving melodic motion.",
   "MetaModuleIncludedModules": [
     {
       "slug": "thereelpeet-seq-mm",
-      "name": "PeetSeq",
-      "displayName": "PeetSeq"
+      "name": "TheReelPeet-Dyn",
+      "displayName": "TheReelPeet-Dyn"
     }
   ]
 }
