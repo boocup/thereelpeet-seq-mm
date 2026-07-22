@@ -1,7 +1,7 @@
 {
-  "slug": "thereelpeet-dyn",
-  "name": "TheReelPeet-Dyn",
-  "version": "2.0.0",
+  "slug": "thereelpeet-seq",
+  "name": "TheReelPeet",
+  "version": "2.1.0",
   "license": "MIT",
   "brand": "THEREELPEET",
   "author": "Pete Buchhop",
@@ -14,8 +14,8 @@
   "minRackVersion": "2.4.0",
   "modules": [
     {
-      "slug": "thereelpeet-dyn",
-      "name": "TheReelPeet-Dyn",
+      "slug": "thereelpeet-seq",
+      "name": "TheReelPeet",
       "description": "Dual generative sequencer with probabilistic note holds and drops, per-lane Rise/Fall envelope, and Dynamics knob for evolving melodic motion.",
       "panel": "res/TheReelPeet.svg",
       "tags": ["Sequencer", "Random", "Envelope generator"]

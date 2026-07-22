@@ -1,20 +1,20 @@
-# TheReelPeet-Dyn
+# TheReelPeet
 
-![TheReelPeet-Dyn in VCV Rack](res/TheReelPeet-screenshot.png)
+![TheReelPeet in VCV Rack](res/TheReelPeet-screenshot.png)
 
-**TheReelPeet-Dyn** is a dual generative sequencer built around probabilistic note phrasing. Rather than playing every step, each lane uses a **Dynamics** knob to shape the musical character — bending notes into sustained holds or dropping them into silence, in a way that breathes and evolves over time.
+**TheReelPeet** is a dual generative sequencer built around probabilistic note phrasing. Rather than playing every step, each lane uses a **Dynamics** knob to shape the musical character — bending notes into sustained holds or dropping them into silence, in a way that breathes and evolves over time.
 
 Each lane produces a randomized 1V/Oct pitch sequence with an independent Rise/Fall envelope, making it well-suited as a self-contained melodic voice or modulation source.
 
-TheReelPeet-Dyn runs natively on both **VCV Rack 2** and the **4ms MetaModule** from a single codebase.
+TheReelPeet runs natively on both **VCV Rack 2** and the **4ms MetaModule** from a single codebase.
 
-TheReelPeet-Dyn is licensed under the [MIT license](./LICENSE).
+TheReelPeet is licensed under the [MIT license](./LICENSE).
 
 ---
 
 ## Overview
 
-TheReelPeet-Dyn contains **two independent sequencer lanes (A and B)**, each with:
+TheReelPeet contains **two independent sequencer lanes (A and B)**, each with:
 
 - Randomized pitch CV per step
 - Variable step length and per-lane BPM
@@ -58,7 +58,7 @@ Small knobs that set the attack (0–2s) and decay (0–4s) time of the per-note
 
 ## Intended Use
 
-TheReelPeet-Dyn works best as a **self-contained generative melodic voice**:
+TheReelPeet works best as a **self-contained generative melodic voice**:
 
 - Patch the 1V/Oct output through an external quantizer for harmonic control.
 - Patch the Envelope CV into a VCA to hear the hold/drop dynamics directly as volume shaping.
@@ -88,4 +88,4 @@ cmake -B build-mm -DCMAKE_TOOLCHAIN_FILE=../MyModule-metamodule/sdk/cmake/arm-to
 cmake --build build-mm
 ```
 
-Output: `build-mm/out/thereelpeet-dyn.mmplugin`
+Output: `build-mm/out/thereelpeet-seq-mm.mmplugin`

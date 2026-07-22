@@ -439,4 +439,4 @@ struct TheReelPeetWidget : ModuleWidget {
 };
 
 Model *modelTheReelPeet =
-    createModel<TheReelPeet, TheReelPeetWidget>("thereelpeet-dyn");
+    createModel<TheReelPeet, TheReelPeetWidget>("thereelpeet-seq");
